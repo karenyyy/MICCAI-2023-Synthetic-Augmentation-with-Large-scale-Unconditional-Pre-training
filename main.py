@@ -268,7 +268,8 @@ class ImageLogger(Callback):
         }
         self.log_steps = [2 ** n for n in range(int(np.log2(self.batch_freq)) + 1)]
         if not increase_log_steps:
-            self.log_steps = [self.batch_freq]
+            # self.log_steps = [self.batch_freq]
+            self.log_steps = []
         self.clamp = clamp
         self.disabled = disabled
         self.log_on_batch_idx = log_on_batch_idx
@@ -336,7 +337,7 @@ class ImageLogger(Callback):
             self.log_local(pl_module.logger.save_dir, split, images,
                            pl_module.global_step, pl_module.current_epoch, batch_idx)
             ckpt_path = os.path.join(pl_module.logger.save_dir,
-                                     f"autoencoder_{pl_module.current_epoch}_{pl_module.global_step}.ckpt")
+                                     f"diffusion_{pl_module.current_epoch}_{pl_module.global_step}.ckpt")
             pl_module.trainer.save_checkpoint(ckpt_path)
             print(f'ckpts saved to {ckpt_path}!!!')
 
@@ -345,13 +346,15 @@ class ImageLogger(Callback):
             logger_log_images(pl_module, images, pl_module.global_step, split)
 
             if is_train:
+                torch.cuda.empty_cache()
                 pl_module.train()
 
     def check_frequency(self, check_idx):
         if ((check_idx % self.batch_freq) == 0 or (check_idx in self.log_steps)) and (
                 check_idx > 0 or self.log_first_step):
             try:
-                self.log_steps.pop(0)
+                if len(self.log_steps) > 0:
+                    self.log_steps.pop(0)
             except IndexError as e:
                 print(e)
                 pass
@@ -378,7 +381,7 @@ class CUDACallback(Callback):
         torch.cuda.synchronize(trainer.root_gpu)
         self.start_time = time.time()
 
-    def on_train_epoch_end(self, trainer, pl_module, outputs):
+    def on_train_epoch_end(self, trainer, pl_module):
         torch.cuda.synchronize(trainer.root_gpu)
         max_memory = torch.cuda.max_memory_allocated(trainer.root_gpu) / 2 ** 20
         epoch_time = time.time() - self.start_time
@@ -660,6 +663,7 @@ if __name__ == "__main__":
             accumulate_grad_batches = 1
         print(f"accumulate_grad_batches = {accumulate_grad_batches}")
         lightning_config.trainer.accumulate_grad_batches = accumulate_grad_batches
+
         if opt.scale_lr:
             model.learning_rate = accumulate_grad_batches * ngpu * bs * base_lr
             print(
@@ -670,6 +674,8 @@ if __name__ == "__main__":
             print("++++ NOT USING LR SCALING ++++")
             print(f"Setting learning rate to {model.learning_rate:.2e}")
 
+        print('opt.scale_lr', opt.scale_lr)
+        print('model.learning_rate', model.learning_rate)
 
         # allow checkpointing via USR1
         def melk(*args, **kwargs):

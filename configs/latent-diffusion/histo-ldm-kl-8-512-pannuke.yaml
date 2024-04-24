@@ -1,0 +1,127 @@
+name: train_virtual_staining
+model:
+  base_learning_rate: 5e-5   # set to target_lr by starting main.py with '--scale_lr False'
+  target: ldm.models.diffusion.ddpm.LatentDiffusion
+  params:
+#    ckpt_path: /gpuhome/jxy225/diffusion_10_120000.ckpt
+#    ckpt_path: /gpuhome/jxy225/HistoDiffAug/logs/2024-03-28_09-19-16_histo-ldm-kl-8-512-lizard/checkpoints/last.ckpt
+#    ckpt_path: /gpuhome/jxy225/HistoDiffAug/logs/2024-03-30_00-09-41_histo-ldm-kl-8-512-lizard/diffusion_75_16400.ckpt
+#    ckpt_path: /gpuhome/jxy225/HistoDiffAug/logs/2024-03-31_10-52-09_histo-ldm-kl-8-512-lizard/diffusion_43_9500.ckpt
+#    ckpt_path: /gpuhome/jxy225/HistoDiffAug/logs/2024-04-03_05-39-46_histo-ldm-kl-8-512-lizard/diffusion_311_68000.ckpt
+    ckpt_path: /gpuhome/jxy225/HistoDiffAug/logs/2024-04-17_10-56-33_histo-ldm-kl-8-512-pannuke/diffusion_103_21000.ckpt
+    linear_start: 0.0015
+    linear_end: 0.0155
+    num_timesteps_cond: 1
+    log_every_t: 200
+    timesteps: 1000
+    loss_type: l1
+    first_stage_key: "jpg"
+    cond_stage_key: "jpg"
+    image_size: 64
+    channels: 4
+    cond_stage_trainable: False
+    concat_mode: False
+#    scale_by_std: True
+    scale_factor: 0.54207
+    use_ema: False
+    monitor: 'val/loss_simple'
+
+
+    control_stage_config:
+      target: ldm.models.diffusion.ddpm.ControlNet
+      params:
+        image_size: 64 # unused
+        in_channels: 4
+        hint_channels: 3
+        model_channels: 320
+        attention_resolutions: [ 1, 2, 4 ]
+        num_res_blocks: 2
+        channel_mult: [ 1, 2, 4, 4 ]
+        num_head_channels: 64
+        use_spatial_transformer: True  # add it back when using conditions
+        use_linear_in_transformer: True
+        use_context_emb: True
+        transformer_depth: 1
+        context_dim: 1024
+        use_checkpoint: True
+        legacy: False
+
+    scheduler_config: # 10000 warmup steps
+      target: ldm.lr_scheduler.LambdaLinearScheduler
+      params:
+        warm_up_steps: [100000]
+        cycle_lengths: [10000000000000]
+        f_start: [1.e-6]
+        f_max: [1.]
+        f_min: [ 1.]
+
+    unet_config:
+      target: ldm.modules.diffusionmodules.openaimodel.UNetModel
+      params:
+        use_checkpoint: True
+        use_fp16: True
+        image_size: 64
+        in_channels: 4
+        out_channels: 4
+        model_channels: 320
+        attention_resolutions: [ 1, 2, 4 ]   # 64, 16, 8, 4
+        num_res_blocks: 2
+        channel_mult: [ 1,2,4,4 ]  # 64, 16, 8, 4, 2
+        num_head_channels: 64
+        use_spatial_transformer: True
+        use_linear_in_transformer: True
+        use_context_emb: True
+        transformer_depth: 1
+        context_dim: 1024
+        legacy: False
+#        use_scale_shift_norm: True
+#        resblock_updown: True
+
+    first_stage_config:
+      target: ldm.models.autoencoder.AutoencoderKL
+      params:
+        embed_dim: 4
+        monitor: "val/rec_loss"
+        ckpt_path: /gpuhome/jxy225/autoencoder_7_445000.ckpt
+        ddconfig:
+          double_z: True
+          z_channels: 4
+          resolution: 512
+          in_channels: 3
+          out_ch: 3
+          ch: 128
+          ch_mult: [ 1,2,2,4]
+          num_res_blocks: 2
+          attn_resolutions: [ ]
+          dropout: 0.0
+        lossconfig:
+          target: torch.nn.Identity
+
+    cond_stage_config: "__is_unconditional__"
+
+data:
+  target: main.DataModuleFromConfig
+  params:
+    batch_size: 16
+    num_workers: 0
+    wrap: False
+    train:
+      target: ldm.data.histo.VirtualStainingDataset
+      params:
+        dataset: "pannuke"
+
+
+lightning:
+  callbacks:
+    image_logger:
+      target: main.ImageLogger
+      params:
+        batch_frequency: 1000
+        max_images: 8
+        increase_log_steps: False
+        log_images_kwargs:
+          ddim_steps: 200
+
+
+  trainer:
+    benchmark: True

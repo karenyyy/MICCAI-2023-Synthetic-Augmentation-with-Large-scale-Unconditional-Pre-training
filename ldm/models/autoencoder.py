@@ -49,8 +49,11 @@ class AutoencoderKL(pl.LightningModule):
         print(f"Restored from {path}")
 
     def encode(self, x):
+        # print('in autoencoder, x: ', x.size())
         h = self.encoder(x)
+        # print('in autoencoder, h: ', h.size())
         moments = self.quant_conv(h)        # torch.Size([4, 6, 64, 64])
+        # print('in autoencoder, moment: ', moments.size())
         posterior = DiagonalGaussianDistribution(moments)
         return posterior
 
@@ -79,6 +82,7 @@ class AutoencoderKL(pl.LightningModule):
         inputs = self.get_input(batch, self.image_key)
         reconstructions, posterior = self(inputs)
 
+        # print('optimizer_idx: ', optimizer_idx)
         if optimizer_idx == 0:
             # train encoder+decoder+logvar
             aeloss, log_dict_ae = self.loss(inputs, reconstructions, posterior, optimizer_idx, self.global_step,

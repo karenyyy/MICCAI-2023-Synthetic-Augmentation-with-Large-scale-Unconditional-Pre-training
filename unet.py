@@ -901,4 +901,4 @@ class EncoderUNetModel(nn.Module):
             return self.out(h)
         else:
             h = h.type(x.dtype)
-            return self.out(h), h.type(x.dtype).mean(dim=(2, 3))
+            return self.out(h)

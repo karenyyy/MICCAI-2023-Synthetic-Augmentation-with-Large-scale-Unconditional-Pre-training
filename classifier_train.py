@@ -113,7 +113,7 @@ def main():
             split_microbatches(args.microbatch, batch, labels, t)
         ):
 
-            logits, features = model(sub_batch, timesteps=sub_t)
+            logits = model(sub_batch, timesteps=sub_t)
             # _, logits = model(sub_batch)
 
             loss = F.cross_entropy(logits, sub_labels, reduction="none")
@@ -224,7 +224,7 @@ def create_argparser():
         resume_checkpoint="",
         log_interval=10,
         eval_interval=5,
-        save_interval=10000,
+        save_interval=100,
     )
     defaults.update(classifier_defaults())
     parser = argparse.ArgumentParser()

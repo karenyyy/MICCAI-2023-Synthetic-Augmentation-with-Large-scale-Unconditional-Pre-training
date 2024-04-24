@@ -20,7 +20,7 @@ from utils.fp16_util import (
     zero_grad,
 )
 from nn import update_ema
-from resample import LossAwareSampler, UniformSampler
+from .resample import LossAwareSampler, UniformSampler
 
 # For ImageNet experiments, this was a good default value.
 # We found that the lg_loss_scale quickly climbed to

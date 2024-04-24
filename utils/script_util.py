@@ -8,7 +8,7 @@ from omegaconf import OmegaConf
 
 from unet import UNetModel, EncoderUNetModel
 
-NUM_CLASSES = 9
+NUM_CLASSES = 5
 
 
 def get_parser():
@@ -19,7 +19,7 @@ def get_parser():
         type=str,
         nargs="?",
         help="load from logdir or checkpoint in logdir",
-        default='/data/histo_diffusion_augmentation/diffusion_model.ckpt'
+        default='/gpuhome/jxy225/HistoDiffAug/logs/2024-04-03_05-39-44_histo-ldm-kl-8-512-skin/diffusion_300_71000.ckpt'
     )
     parser.add_argument(
         "-n",
@@ -75,13 +75,13 @@ def classifier_defaults():
     Defaults for classifier models.
     """
     return dict(
-        image_size=256,
+        image_size=512,
         classifier_use_fp16=False,
         classifier_width=128,
         classifier_depth=2,
         classifier_attention_resolutions="16,8",  # 16
-        classifier_use_scale_shift_norm=True,  # False
-        classifier_resblock_updown=True,  # False
+        classifier_use_scale_shift_norm=False,  # False
+        classifier_resblock_updown=False,  # False
         classifier_pool="attention",
     )
 
@@ -96,7 +96,7 @@ def create_classifier(
         classifier_pool,
 ):
     if image_size == 512:
-        channel_mult = (0.5, 1, 1, 2, 2, 4, 4)
+        channel_mult = (1, 1, 2, 2, 4, 4)
     elif image_size == 256:
         channel_mult = (1, 1, 2, 2, 4, 4)
     elif image_size == 128:
@@ -112,9 +112,9 @@ def create_classifier(
 
     return EncoderUNetModel(
         image_size=image_size,
-        in_channels=3,
+        in_channels=4,
         model_channels=classifier_width,
-        out_channels=9,
+        out_channels=5,
         num_res_blocks=classifier_depth,
         attention_resolutions=tuple(attention_ds),
         channel_mult=channel_mult,
@@ -131,7 +131,7 @@ def create_classifier(
 def create_diffusion():
     parser = get_parser()
     opt, unknown = parser.parse_known_args()
-    configs = [OmegaConf.load('configs/latent-diffusion/histo-ldm-kl-8.yaml')]
+    configs = [OmegaConf.load('configs/latent-diffusion/histo-ldm-kl-8-512-skin.yaml')]
     cli = OmegaConf.from_dotlist(unknown)
     config = OmegaConf.merge(*configs, cli)
     # print(config)

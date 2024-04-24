@@ -2,7 +2,7 @@ model:
   base_learning_rate: 5.0e-5   # set to target_lr by starting main.py with '--scale_lr False'
   target: ldm.models.diffusion.ddpm.LatentDiffusion
   params:
-#    ckpt_path: /data/histo_diffusion_augmentation/diffusion.ckpt
+    ckpt_path: autoencoder.ckpt
     linear_start: 0.0015
     linear_end: 0.0155
     num_timesteps_cond: 1
@@ -46,7 +46,7 @@ model:
       params:
         embed_dim: 3
         monitor: "val/rec_loss"
-        ckpt_path: /data/histo_diffusion_augmentation/autoencoder.ckpt  # replace with path to your saved autoencoder checkpoint
+        ckpt_path: autoencoder.ckpt
         ddconfig:
           double_z: True
           z_channels: 3
@@ -82,6 +82,8 @@ lightning:
         batch_frequency: 1000
         max_images: 8
         increase_log_steps: False
+        log_images_kwargs:
+          ddim_steps: 200
 
 
   trainer:
